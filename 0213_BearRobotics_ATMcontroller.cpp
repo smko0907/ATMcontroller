@@ -5,17 +5,17 @@
 
 using namespace std;
 
-// ATM Controller 
-class ATMController {
+// -------------------------
+// Bank system
+// (to securely separate account information from the atm)
+// -------------------------
+
+class BankSystem {
 private:
     unordered_map<string, int> accountBalance; // Account ID, balance
     unordered_map<string, string> accountPin;  // Account ID, PIN
-    string currentAccount; // To store the current Account ID
-    string currency = "$"; // Currency of the bank account
-    bool authentication = false; // Flag to check the authentication
-
 public:
-    ATMController() {
+    BankSystem(){
         // Sample accounts for simulation
         accountBalance["123456789"] = 0; // Initial balance of account ID "123456789" : $0
         accountPin["123456789"] = "1234"; // Pin number of account ID "123456789"
@@ -25,8 +25,38 @@ public:
 
         accountBalance["123000321"] = 300; // Initial balance of account ID "123000321" : $300
         accountPin["123000321"] = "0000"; // Pin number of account ID "123000321"
-
     }
+
+    // Verify if an account exists
+    bool validAccount(const string& accountID){
+        return accountBalance.find(accountID) != accountBalance.end();
+    }
+
+    // Verify if the pins are correct
+    bool verifyPin (const string& accountID, const string& inputPin){
+        return accountPin[accountID] == inputPin;
+    }
+
+    // Get the balance by matching the account ID
+    int findBalance(const string& accountID){
+        return accountBalance[accountID];
+    }
+};
+
+// -------------------------
+// ATM controller
+// (i/o system for users)
+// -------------------------
+class ATMController {
+private:
+    BankSystem& bank; // Reference to the bank system
+    string currentAccount; // To store the current Account ID
+    string currency = "$"; // Currency of the bank account
+    int currentBalance = 0;
+    bool authentication = false; // Flag to check the authentication
+
+public:
+    ATMController(BankSystem& bankSystem) : bank(bankSystem) {}
 
     bool insertCard(string accountID){
         // Check if the account ID starts with "123"
@@ -36,7 +66,7 @@ public:
             return false;
         }
         // Check if the account exists in the bank system
-        if (accountBalance.find(accountID) != accountBalance.end()) {
+        if (bank.validAccount(accountID)) {
             cout << "Card inserted successfully. \n";
             currentAccount = accountID;
             return true;
@@ -55,7 +85,7 @@ public:
             return false;
         }
         // Check if the PIN is correct
-        if (accountPin[currentAccount] == inputPin) {
+        if (bank.verifyPin(currentAccount, inputPin)) {
             cout << "PIN verified. \n";
             authentication = true;
             return true;
@@ -84,7 +114,8 @@ public:
             return;
         }
         // Display the current balance of the selected account
-        cout << "Current Balance: " << currency << accountBalance[currentAccount] << endl;
+        currentBalance = bank.findBalance(currentAccount);
+        cout << "Current Balance: " << currency << currentBalance << endl;
     }
 
     void cashDeposit(int amount){
@@ -94,7 +125,7 @@ public:
             return;
         }
         // Deposit cash to the current account
-        accountBalance[currentAccount] += amount;
+        currentBalance += amount;
         cout << "Deposit Complete: " << currency << amount << endl;
     }
 
@@ -105,10 +136,10 @@ public:
             return;
         }
         // Check if the recipient's bank account exists in the bank system
-        if (accountBalance.find(recipient) != accountBalance.end()) {
+        if (bank.validAccount(recipient)) {
             cout << "Transfering to: " << recipient << endl;
-            if (accountBalance[currentAccount] >= amount) {
-                accountBalance[currentAccount] -= amount;
+            if (currentBalance >= amount) {
+                currentBalance -= amount;
                 cout << "Transaction Completed :" << currency << amount << endl;
             }
             else cout << "Insufficient Balance. Transaction Incomplete. \n";
@@ -123,8 +154,8 @@ public:
             return;
         }
         // Check if there is sufficient amount of money and then proceed to cash withdrawal
-        if (accountBalance[currentAccount] >= amount) {
-            accountBalance[currentAccount] -= amount;
+        if (currentBalance >= amount) {
+            currentBalance -= amount;
             cout << "Withdrawal Complete: " << currency << amount << endl;
         }
         else cout << "Insufficient Balance. Withdrawal Incomplete. \n";
@@ -139,10 +170,14 @@ public:
 };
 
 
-// Input Test
+// -------------------------
+// Input test for ATM simulation
+// -------------------------
 int main() {
-    ATMController atm;
+    BankSystem bank;
+    ATMController atm(bank);
 
+    // Simulation for account ID "123123123"
     if (atm.insertCard("123123123")) {
         if (atm.enterPIN("2323")){
             if (atm.selectAccount()){
