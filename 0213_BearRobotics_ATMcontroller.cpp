@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -8,15 +9,23 @@ using namespace std;
 class ATMController {
 private:
     unordered_map<string, int> accountBalance; // Account ID, balance
-    string currentAccount;
-    string currency = "$";
+    unordered_map<string, string> accountPin;  // Account ID, PIN
+    string currentAccount; // To store the current Account ID
+    string currency = "$"; // Currency of the bank account
+    bool authentication = false; // Flag to check the authentication
 
 public:
     ATMController() {
         // Sample accounts for simulation
         accountBalance["123456789"] = 0; // Initial balance of account ID "123456789" : $0
+        accountPin["123456789"] = "1234"; // Pin number of account ID "123456789"
+
         accountBalance["123123123"] = 100000; // Initial balance of account ID "123123123" : $100000
+        accountPin["123123123"] = "2323"; // Pin number of account ID "123123123"
+
         accountBalance["123000321"] = 300; // Initial balance of account ID "123000321" : $300
+        accountPin["123000321"] = "0000"; // Pin number of account ID "123000321"
+
     }
 
     bool insertCard(string accountID){
@@ -28,6 +37,7 @@ public:
         }
         // Check if the account exists in the bank system
         if (accountBalance.find(accountID) != accountBalance.end()) {
+            cout << "Card inserted successfully. \n";
             currentAccount = accountID;
             return true;
         }
@@ -38,21 +48,65 @@ public:
         }
     }
 
+    bool enterPIN(string inputPin) {
+        // Double-check whether if the card is readable
+        if (currentAccount.empty()) {
+            cout << "Please insert your card. \n";
+            return false;
+        }
+        // Check if the PIN is correct
+        if (accountPin[currentAccount] == inputPin) {
+            cout << "PIN verified. \n";
+            authentication = true;
+            return true;
+        }
+        else {
+            cout << "Invalid PIN. Please try again. \n";
+            return false;
+        }
+    }
+
+    bool selectAccount(){
+        // Double-check for authentication
+        if (!authentication){
+            cout << "Please enter your PIN first. \n";
+            return false;
+        }
+        // Select account for the next procedure
+        cout << "Proceeding with account: " << currentAccount << endl;
+        return true;
+    }
+
     void displayBalance() {
-        if (currentAccount.empty()) return;
+        // Double-check for authentication
+        if (!authentication){
+            cout << "Please enter your PIN first. \n";
+            return;
+        }
+        // Display the current balance of the selected account
         cout << "Current Balance: " << currency << accountBalance[currentAccount] << endl;
     }
 
     void cashDeposit(int amount){
-        if (currentAccount.empty()) return;
+        // Double-check for authentication
+        if (!authentication){
+            cout << "Please enter your PIN first. \n";
+            return;
+        }
+        // Deposit cash to the current account
         accountBalance[currentAccount] += amount;
         cout << "Deposit Complete: " << currency << amount << endl;
     }
 
-    void transfer(int amount, string accountNo){
-        if (currentAccount.empty()) return;
-        if (accountBalance.find(accountNo) != accountBalance.end()) {
-            cout << "Transfering to :" << accountNo << endl;
+    void transfer(int amount, string recipient){
+        // Double-check for authentication
+        if (!authentication){
+            cout << "Please enter your PIN first. \n";
+            return;
+        }
+        // Check if the recipient's bank account exists in the bank system
+        if (accountBalance.find(recipient) != accountBalance.end()) {
+            cout << "Transfering to: " << recipient << endl;
             if (accountBalance[currentAccount] >= amount) {
                 accountBalance[currentAccount] -= amount;
                 cout << "Transaction Completed :" << currency << amount << endl;
@@ -63,17 +117,24 @@ public:
     }
 
     void cashWithdrawal (int amount){
-        if (currentAccount.empty()) return;
+        // Double-check for authentication
+        if (!authentication){
+            cout << "Please enter your PIN first. \n";
+            return;
+        }
+        // Check if there is sufficient amount of money and then proceed to cash withdrawal
         if (accountBalance[currentAccount] >= amount) {
             accountBalance[currentAccount] -= amount;
-            cout << " Withdrawal Complete: " << currency << amount << endl;
+            cout << "Withdrawal Complete: " << currency << amount << endl;
         }
         else cout << "Insufficient Balance. Withdrawal Incomplete. \n";
     }
 
     void ejectCard() {
+        // Eject the card and receipt once all the processes are done
+        cout << "Please take your card and receipt. \n";
         currentAccount = "";
-        cout << "Please tkae your card and receipt. \n";
+        authentication = false;
     }
 };
 
@@ -83,10 +144,14 @@ int main() {
     ATMController atm;
 
     if (atm.insertCard("123123123")) {
-        atm.displayBalance();
-        atm.cashDeposit(2000);
-        atm.transfer(300,"123456789");
-        atm.cashWithdrawal(50);
+        if (atm.enterPIN("2323")){
+            if (atm.selectAccount()){
+                atm.displayBalance();
+                atm.cashDeposit(2000);
+                atm.transfer(300,"123456789");
+                atm.cashWithdrawal(50);
+            }
+        }
         atm.ejectCard();
     }
     return 0;
