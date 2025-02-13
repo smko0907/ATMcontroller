@@ -41,6 +41,21 @@ public:
     int findBalance(const string& accountID){
         return accountBalance[accountID];
     }
+
+    // Update the account balance for later use
+    void updateBalance(const string& accountID, int amount) {
+        accountBalance[accountID] += amount;
+    }
+
+    // Updat the account for transaction
+    bool transferBalance(const string& fromAcc, const string& toAcc, int amount){
+        if (validAccount(toAcc) && accountBalance[fromAcc] >= amount) {
+            accountBalance[fromAcc] -= amount;
+            accountBalance[toAcc] += amount;
+            return true;
+        }
+        return false;
+    }
 };
 
 // -------------------------
@@ -90,6 +105,13 @@ public:
             authentication = true;
             return true;
         }
+
+        /* 
+        Side Note:
+        probably best to limit the number of attempts for security issues
+        can add this feature later if needed
+        */
+
         else {
             cout << "Invalid PIN. Please try again. \n";
             return false;
@@ -125,7 +147,7 @@ public:
             return;
         }
         // Deposit cash to the current account
-        currentBalance += amount;
+        bank.updateBalance(currentAccount, amount);
         cout << "Deposit Complete: " << currency << amount << endl;
     }
 
@@ -138,8 +160,7 @@ public:
         // Check if the recipient's bank account exists in the bank system
         if (bank.validAccount(recipient)) {
             cout << "Transfering to: " << recipient << endl;
-            if (currentBalance >= amount) {
-                currentBalance -= amount;
+            if (bank.transferBalance(currentAccount, recipient, amount)) {
                 cout << "Transaction Completed :" << currency << amount << endl;
             }
             else cout << "Insufficient Balance. Transaction Incomplete. \n";
@@ -154,8 +175,8 @@ public:
             return;
         }
         // Check if there is sufficient amount of money and then proceed to cash withdrawal
-        if (currentBalance >= amount) {
-            currentBalance -= amount;
+        if (bank.findBalance(currentAccount) >= amount) {
+            bank.updateBalance(currentAccount, -amount);
             cout << "Withdrawal Complete: " << currency << amount << endl;
         }
         else cout << "Insufficient Balance. Withdrawal Incomplete. \n";
@@ -163,7 +184,7 @@ public:
 
     void ejectCard() {
         // Eject the card and receipt once all the processes are done
-        cout << "Please take your card and receipt. \n";
+        cout << "Please take your card and receipt. \n\n";
         currentAccount = "";
         authentication = false;
     }
@@ -189,5 +210,30 @@ int main() {
         }
         atm.ejectCard();
     }
+
+    // Simulation for wrong PIN number and insufficient balance
+    if (atm.insertCard("123000321")) {
+        if (atm.enterPIN("0110")){
+            if (atm.selectAccount()){
+                    atm.displayBalance();
+
+            }
+        }
+        else if (atm.enterPIN("0000")){
+            if (atm.selectAccount()){
+                atm.displayBalance();
+                atm.cashDeposit(10);
+                atm.transfer(300,"123456789");
+                atm.cashWithdrawal(50);
+            }
+        }
+        atm.ejectCard();
+    }
     return 0;
+
+    /* 
+    Side Note:
+    instead of using simulation,
+    can let users to directly input
+    */
 }
